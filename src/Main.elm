@@ -5,6 +5,7 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onDoubleClick)
+import Random
 
 
 type alias User =
@@ -27,7 +28,7 @@ users =
     , User "https://raw.githubusercontent.com/captn3m0/avatars/master/gravatar/cuber.jpg" 1 2
     , User "https://d29xw0ra2h4o4u.cloudfront.net/assets/people/justin_holzmann_150-99cc8a73d0752979e3e6900e31c6e4a051fc2e5856920a87b58f26e30db8aa7b.jpg" 2 2
     , User "https://d29xw0ra2h4o4u.cloudfront.net/assets/people/raunak_singh_150-121093425a4819b4f050b1076621a5288c310b29787c0e5ff7774d95a02363b7.jpg" 2 1
-    , User "
+    , User "https://s.gravatar.com/avatar/b2d41e7def3ee97a7bd5612e7fe2f604?s=80" 1 3
     ]
 
 
@@ -74,6 +75,20 @@ nextColor input =
             White
 
 
+randomIshColor : Random.Generator Color
+randomIshColor =
+    Random.weighted ( 80, White )
+        [ ( 10, Black )
+        , ( 10, Violet )
+        , ( 10, Indigo )
+        , ( 10, Blue )
+        , ( 10, Green )
+        , ( 10, Yellow )
+        , ( 10, Orange )
+        , ( 10, Red )
+        ]
+
+
 type World
     = World (Array (Array Color))
 
@@ -85,32 +100,39 @@ type alias Model =
     }
 
 
-init : Model
-init =
-    Model
+type alias Flags =
+    Int
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( Model
         (World
-            (Array.fromList
-                [ Array.fromList [ White, Blue, Black, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, Black, Blue, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, White, Blue, Orange, Red, Yellow, Green ]
-                ]
-            )
+            (Array.repeat 20 (Array.repeat 20 White))
         )
         users
         Nothing
+    , SetSomeRandom
+    )
 
 
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.document
+        { init = init
+        , update = update
+        , view = view
+        , subscriptions = subscriptions
+        }
 
 
 type Msg
     = ChangeColor Int Int -- X and Y coordinates in the grid.
     | GoToRoom Int Int -- X and Y coordinates in the grid.
     | Select User
+    | SetSomeRandom
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         (World world) =
@@ -118,7 +140,7 @@ update msg model =
     in
     case msg of
         GoToRoom xCoordinate yCoordinate ->
-            { model
+            ( { model
                 | users =
                     case model.selectedUser of
                         Nothing ->
@@ -134,10 +156,12 @@ update msg model =
                                         candidateUser
                                 )
                                 model.users
-            }
+              }
+            , Cmd.none
+            )
 
         ChangeColor xCoordinate yCoordinate ->
-            { model
+            ( { model
                 | world =
                     case Array.get yCoordinate world of
                         Nothing ->
@@ -150,18 +174,25 @@ update msg model =
 
                                 Just color ->
                                     World (Array.set yCoordinate (Array.set xCoordinate (nextColor color) row) world)
-            }
+              }
+            , Cmd.none
+            )
 
         Select user ->
-            { model | selectedUser = Just user }
+            ( { model | selectedUser = Just user }, Cmd.none )
+
+        SetSomeRandom ->
+            ( model, Cmd.none )
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    div []
+    { title = "Virtual RC 3.0"
+    , body =
         [ viewWorld model.world
         , div [] (List.map (viewUser model.selectedUser) model.users)
         ]
+    }
 
 
 viewUser : Maybe User -> User -> Html Msg
@@ -251,4 +282,9 @@ viewCell yCoordinate xCoordinate color =
 
 cellSize : String
 cellSize =
-    "100px"
+    "30px"
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
