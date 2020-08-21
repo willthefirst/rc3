@@ -27,7 +27,6 @@ users =
     , User "https://raw.githubusercontent.com/captn3m0/avatars/master/gravatar/cuber.jpg" 1 2
     , User "https://d29xw0ra2h4o4u.cloudfront.net/assets/people/justin_holzmann_150-99cc8a73d0752979e3e6900e31c6e4a051fc2e5856920a87b58f26e30db8aa7b.jpg" 2 2
     , User "https://d29xw0ra2h4o4u.cloudfront.net/assets/people/raunak_singh_150-121093425a4819b4f050b1076621a5288c310b29787c0e5ff7774d95a02363b7.jpg" 2 1
-    , User "
     ]
 
 
@@ -75,7 +74,12 @@ nextColor input =
 
 
 type World
-    = World (Array (Array Color))
+    = World (Array (Array Location))
+
+
+type Location
+    = NotWall Color -- Rename this type blah
+    | Wall
 
 
 type alias Model =
@@ -90,9 +94,9 @@ init =
     Model
         (World
             (Array.fromList
-                [ Array.fromList [ White, Blue, Black, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, Black, Blue, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, White, Blue, Orange, Red, Yellow, Green ]
+                [ Array.fromList [ NotWall White, NotWall Blue, NotWall Black, NotWall Orange, NotWall Orange, NotWall Yellow, NotWall Green ]
+                , Array.fromList [ NotWall Blue, NotWall Black, NotWall Blue, NotWall Orange, NotWall Orange, Wall, Wall ]
+                , Array.fromList [ NotWall Blue, NotWall White, NotWall Blue, NotWall Orange, NotWall Orange, Wall, NotWall Green ]
                 ]
             )
         )
@@ -106,7 +110,7 @@ main =
 
 type Msg
     = ChangeColor Int Int -- X and Y coordinates in the grid.
-    | GoToRoom Int Int -- X and Y coordinates in the grid.
+    | GoToCoordinate Int Int -- X and Y coordinates in the grid.
     | Select User
 
 
@@ -117,7 +121,7 @@ update msg model =
             model.world
     in
     case msg of
-        GoToRoom xCoordinate yCoordinate ->
+        GoToCoordinate xCoordinate yCoordinate ->
             { model
                 | users =
                     case model.selectedUser of
@@ -148,8 +152,13 @@ update msg model =
                                 Nothing ->
                                     World world
 
-                                Just color ->
-                                    World (Array.set yCoordinate (Array.set xCoordinate (nextColor color) row) world)
+                                Just loc ->
+                                    case loc of
+                                        NotWall color ->
+                                            World (Array.set yCoordinate (Array.set xCoordinate (NotWall (nextColor color)) row) world)
+
+                                        Wall ->
+                                            World world
             }
 
         Select user ->
@@ -184,16 +193,6 @@ viewUser selectedUser user =
         []
 
 
-viewRow : Int -> Array Color -> Html Msg
-viewRow yCoordinate row =
-    div
-        [ style "display" "flex"
-        , style "margin" "0"
-        , style "padding" "0"
-        ]
-        (Array.toList (Array.indexedMap (viewCell yCoordinate) row))
-
-
 viewWorld : World -> Html Msg
 viewWorld (World entries) =
     div
@@ -203,47 +202,36 @@ viewWorld (World entries) =
         (Array.toList (Array.indexedMap viewRow entries))
 
 
-viewCell : Int -> Int -> Color -> Html Msg
-viewCell yCoordinate xCoordinate color =
+viewRow : Int -> Array Location -> Html Msg
+viewRow yCoordinate row =
+    div
+        [ style "display" "flex"
+        , style "margin" "0"
+        , style "padding" "0"
+        ]
+        (Array.toList (Array.indexedMap (viewCell yCoordinate) row))
+
+
+viewCell : Int -> Int -> Location -> Html Msg
+viewCell yCoordinate xCoordinate location =
     let
-        cssColor =
-            case color of
-                White ->
-                    "white"
+        cssColor loc =
+            case loc of
+                NotWall c ->
+                    unwrapColor c
 
-                Blue ->
-                    "lightblue"
-
-                Black ->
-                    "black"
-
-                Orange ->
-                    "orange"
-
-                Violet ->
-                    "violet"
-
-                Indigo ->
-                    "indigo"
-
-                Green ->
-                    "green"
-
-                Yellow ->
-                    "yellow"
-
-                Red ->
-                    "red"
+                Wall ->
+                    "gray"
     in
     span
         [ style "display" "inline-block"
-        , style "background-color" cssColor
+        , style "background-color" (cssColor location)
         , style "width" cellSize
         , style "outline" "solid 1px lightgray"
         , style "height" cellSize
         , style "margin" "0"
         , style "padding" "0"
-        , onClick (GoToRoom xCoordinate yCoordinate)
+        , onClick (GoToCoordinate xCoordinate yCoordinate)
         , onDoubleClick (ChangeColor xCoordinate yCoordinate)
         ]
         []
@@ -252,3 +240,34 @@ viewCell yCoordinate xCoordinate color =
 cellSize : String
 cellSize =
     "100px"
+
+
+unwrapColor : Color -> String
+unwrapColor color =
+    case color of
+        White ->
+            "white"
+
+        Blue ->
+            "lightblue"
+
+        Black ->
+            "black"
+
+        Orange ->
+            "orange"
+
+        Violet ->
+            "violet"
+
+        Indigo ->
+            "indigo"
+
+        Green ->
+            "green"
+
+        Yellow ->
+            "yellow"
+
+        Red ->
+            "red"
