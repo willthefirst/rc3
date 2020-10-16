@@ -1,17 +1,21 @@
 module Types exposing (..)
+import Lamdera exposing (ClientId, SessionId)
 
+-- Our imports
+
+import Array exposing (Array)
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Url exposing (Url)
 
--- Our imports
-import Array exposing (Array)
+
 
 type alias User =
     { profile : String
     , x : Int
     , y : Int
     }
+
 
 type Color
     = White
@@ -24,8 +28,10 @@ type Color
     | Orange
     | Red
 
+
 type World
     = World (Array (Array Color))
+
 
 type alias FrontendModel =
     { key : Key
@@ -33,6 +39,7 @@ type alias FrontendModel =
     , world : World
     , users : List User
     , selectedUser : Maybe User
+    , clientId : String
     }
 
 
@@ -57,8 +64,10 @@ type ToBackend
 
 
 type BackendMsg
-    = NoOpBackendMsg
+    = ClientConnected SessionId ClientId
+    | NoOpBackendMsg
 
 
 type ToFrontend
     = NoOpToFrontend
+    | UpdateWorld World String

@@ -1,18 +1,16 @@
 module Frontend exposing (..)
 
+-- Our imports
+
+import Array exposing (Array)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Html
-import Html.Attributes as Attr
+import Html exposing (..)
+import Html.Attributes as Attr exposing (..)
+import Html.Events exposing (onClick, onDoubleClick)
 import Lamdera
 import Types exposing (..)
 import Url
-
--- Our imports
-import Array exposing (Array)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onDoubleClick)
 
 
 type alias Model =
@@ -30,6 +28,7 @@ app =
         , view = view
         }
 
+
 users : List User
 users =
     [ User "https://kofi.sexy/images/profile.jpg" 0 0
@@ -38,45 +37,50 @@ users =
     , User "https://d29xw0ra2h4o4u.cloudfront.net/assets/people/raunak_singh_150-121093425a4819b4f050b1076621a5288c310b29787c0e5ff7774d95a02363b7.jpg" 2 1
     ]
 
+
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
       , message = "Welcome to Lamdera! You're looking at the auto-generated base implementation. Check out src/Frontend.elm to start coding!"
-      , world = (World
-            (Array.fromList
-                [ Array.fromList [ White, Blue, Black, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, Black, Blue, Orange, Red, Yellow, Green ]
-                , Array.fromList [ Blue, White, Blue, Orange, Red, Yellow, Green ]
-                ]
-            )
-        )
+      , world = World (Array.fromList [])
       , users = users
       , selectedUser = Nothing
+      , clientId = ""
       }
     , Cmd.none
     )
+
 
 nextColor : Color -> Color
 nextColor input =
     case input of
         White ->
             Black
+
         Black ->
             Violet
+
         Violet ->
             Indigo
+
         Indigo ->
             Blue
+
         Blue ->
             Green
+
         Green ->
             Yellow
+
         Yellow ->
             Orange
+
         Orange ->
             Red
+
         Red ->
             White
+
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
@@ -99,44 +103,59 @@ update msg model =
 
         UrlChanged url ->
             ( model, Cmd.none )
+
         NoOpFrontendMsg ->
             ( model, Cmd.none )
+
         GoToRoom xCoordinate yCoordinate ->
-            ({ model
+            ( { model
                 | users =
                     case model.selectedUser of
                         Nothing ->
                             model.users
+
                         Just user ->
                             List.map
                                 (\candidateUser ->
                                     if candidateUser == user then
                                         { user | x = xCoordinate, y = yCoordinate }
+
                                     else
                                         candidateUser
                                 )
                                 model.users
-            }, Cmd.none)
+              }
+            , Cmd.none
+            )
+
         ChangeColor xCoordinate yCoordinate ->
-            ({ model
+            ( { model
                 | world =
                     case Array.get yCoordinate world of
                         Nothing ->
                             World world
+
                         Just row ->
                             case Array.get xCoordinate row of
                                 Nothing ->
                                     World world
+
                                 Just color ->
                                     World (Array.set yCoordinate (Array.set xCoordinate (nextColor color) row) world)
-            }, Cmd.none)
+              }
+            , Cmd.none
+            )
+
         Select user ->
-            ({ model | selectedUser = Just user }, Cmd.none)
+            ( { model | selectedUser = Just user }, Cmd.none )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
+        UpdateWorld newWorld clientId ->
+            ( { model | world = newWorld, clientId = clientId }, Cmd.none )
+
         NoOpToFrontend ->
             ( model, Cmd.none )
 
@@ -144,12 +163,13 @@ updateFromBackend msg model =
 view : Model -> Browser.Document FrontendMsg
 view model =
     { title = "ASDASD"
-    , body = [ viewWorld model.world
+    , body =
+        [ viewWorld model.world
         , div [] (List.map (viewUser model.selectedUser) model.users)
         ]
     }
 
-       
+
 viewUser : Maybe User -> User -> Html FrontendMsg
 viewUser selectedUser user =
     img
@@ -162,11 +182,14 @@ viewUser selectedUser user =
         , if selectedUser == Just user then
             style "outline" "solid 1px blue"
             -- all ifs must have an else
+
           else
             class ""
         , onClick (Select user)
         ]
         []
+
+
 viewRow : Int -> Array Color -> Html FrontendMsg
 viewRow yCoordinate row =
     div
@@ -175,6 +198,8 @@ viewRow yCoordinate row =
         , style "padding" "0"
         ]
         (Array.toList (Array.indexedMap (viewCell yCoordinate) row))
+
+
 viewWorld : World -> Html FrontendMsg
 viewWorld (World entries) =
     div
@@ -182,6 +207,8 @@ viewWorld (World entries) =
         , style "padding" "0"
         ]
         (Array.toList (Array.indexedMap viewRow entries))
+
+
 viewCell : Int -> Int -> Color -> Html FrontendMsg
 viewCell yCoordinate xCoordinate color =
     let
@@ -189,20 +216,28 @@ viewCell yCoordinate xCoordinate color =
             case color of
                 White ->
                     "white"
+
                 Blue ->
                     "lightblue"
+
                 Black ->
                     "black"
+
                 Orange ->
                     "orange"
+
                 Violet ->
                     "violet"
+
                 Indigo ->
                     "indigo"
+
                 Green ->
                     "green"
+
                 Yellow ->
                     "yellow"
+
                 Red ->
                     "red"
     in
@@ -218,7 +253,8 @@ viewCell yCoordinate xCoordinate color =
         , onDoubleClick (ChangeColor xCoordinate yCoordinate)
         ]
         []
+
+
 cellSize : String
 cellSize =
     "100px"
-
